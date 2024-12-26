@@ -1,0 +1,101 @@
+
+.Address {
+              position: fixed;  /* Fixed positioning to keep it on top of the page */
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              display: flex;
+              justify-content: center;  /* Centering the form */
+              align-items: center;
+              z-index: 9999;
+              background-color: rgba(59, 55, 55, 0.8);  /* Semi-transparent background */
+              padding: 20px;
+           }
+           
+ .close-btn {
+              position: absolute;  /* Positioned relative to its closest positioned ancestor (.Address) */
+              top: 10px;  /* Adjust distance from top */
+              right: 10px;  /* Adjust distance from right */
+              padding: 8px 12px;
+              background-color: #f57e5a;  /* Red background */
+              color: white;
+              font-size: 16px;
+              border: none;
+              border-radius: 50%;
+              cursor: pointer;
+              z-index: 10000;  /* Ensure it's above other content */
+           }
+
+  .close-btn:active {
+              transform: scale(0.9);  /* Slightly shrink the button */
+              opacity: 0.7;  /* Slightly fade out when clicked */
+           }
+           
+           /* Optional: Add a hover effect to indicate interactivity */
+   .close-btn:hover {
+              background-color: rgb(214, 81, 81);  /* Darker red on hover */
+           }
+
+.address-form {
+              padding:20px;
+              display: flex;
+              flex-direction: column;
+              justify-content:center;
+              max-width:800px;
+              background-color:white;
+             
+            
+            }
+
+            .address-form div {
+              display: flex;
+              flex-direction: column;
+            
+             
+            
+            }
+            
+            label {
+             
+              font-size: 14px;
+              color: #333;
+              margin-bottom: 5px;
+
+            }
+            
+             input {
+              padding: 8px;
+              font-size: 16px;
+              border: 1px solid #ccc;
+              border-radius: 5px;
+            }
+            
+            input:focus {
+              outline: none;
+              border-color: #4CAF50;
+            }
+            
+            /* Submit button style */
+            .address-form-submit {
+              background-color: #f57e5a;
+              color: white;
+              padding: 12px 20px;
+              border: none;
+              border-radius: 5px;
+              font-size: 16px;
+              cursor: pointer;
+              margin-top:10px;
+            }
+            
+            .address-form-submit:hover {
+              background-color: #45a049;
+            }
+            
+            /* Error message style */
+            .error-message {
+              color: red;
+              font-size: 14px;
+              margin-top: 10px;
+              text-align: center;
+            }
