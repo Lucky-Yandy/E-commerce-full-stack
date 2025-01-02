@@ -71,15 +71,20 @@ const CartItems = () => {
           .map((product) => ({
             productId: product.id,
             name: product.ProductName,
-            price: product.ProductPrice,
+            price: product.ProductPrice, 
+            image: product.ProductImage[0]?.url,
             quantity: cartItems[product.id],
+            description:product.ProductDescription,
             total: (product.ProductPrice * cartItems[product.id]).toFixed(2),
           }));
     
-        const customerId = auth.id; // Get user ID from AuthContext
-    
+        const customerId = auth.id; 
+        console.log("this is the auth",auth);
+        const customerName=auth.name;
+        console.log("this is the auth name",customerName);
         const orderData = {
           customerId,
+          customerName,
           orderItems,
           totalAmount: getTotalCartAmount(),
           shippingAddress: address,
@@ -88,7 +93,7 @@ const CartItems = () => {
         console.log("the data will be submited",orderData);
     
         try {
-          const response = await fetch('http://localhost:5000/api/orders', {
+          const response = await fetch('http://localhost:5000/api/create-checkout-session', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -98,9 +103,9 @@ const CartItems = () => {
     
           const result = await response.json();
     
-          if (response.ok) {
-            // Handle success (e.g., clear cart, notify user)
-            alert("Your order has been placed successfully!");
+          if (result.url) {
+            // Redirect user to Stripe Checkout
+            window.location.href = result.url;
             // Optionally: clear the cart (if desired)
             // clearCart();
           } else {

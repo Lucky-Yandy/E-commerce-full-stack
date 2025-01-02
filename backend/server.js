@@ -1,10 +1,14 @@
 const express = require('express');
-const bcrypt = require('bcrypt');
 const cors = require('cors');
-const base = require('./airtable');
 const app = express();
-const jwt = require('jsonwebtoken');
 require('dotenv').config();
+
+//import from controller
+const { getProducts } = require('./controller/productController');
+const { registerUser } = require('./controller/registerController');
+const { userLogin } = require('./controller/loginController');
+const {payment} = require('./controller/stripController')
+
 
 
 const corsOptions = {
@@ -16,159 +20,17 @@ app.use(cors(corsOptions));
 
 app.use(express.json());
 
-app.get('/api/products', async (req, res) => {
-    try {
-        const products = [];
-        // Use async/await with eachPage to ensure you fetch all pages of data
-        await new Promise((resolve, reject) => {
-            base('Products')
-                .select()
-                .eachPage(async (records, fetchNextPage) => {
-                    try {
-                        const promises = records.map(async (record) => {
-                            
-                          
-                            products.push({
-                                id: record.id,
-                                ...record.fields, // Add the category name
-                               
-                                        // Add the image URLs
-                            });
-                        });
-            
-                        // Wait for all promises to resolve before fetching the next page
-                        await Promise.all(promises);
-                        fetchNextPage();
-                    } catch (err) {
-                        reject(err); // Reject if any error occurs in processing records
-                    }
-                }, (err) => {
-                    if (err) {
-                        reject(err); // Reject if an error occurs in fetching pages
-                    } else {
-                        resolve(); // Resolve when all pages are processed
-                    }
-                });
-        });
+app.get('/api/products', getProducts);
 
-        res.status(200).json(products);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: error.message });
-    }
-});
+app.post('/api/register', registerUser);
 
-// post sign up
-app.post('/api/register', async (req, res) => {
-    const { user, email, pwd } = req.body;
-  
- 
-    try {
-        const tableName = 'Customers';
-        // Check if the user or email already exists in Airtable
-        const existingRecords = await base(tableName).select({
-            filterByFormula: `OR(CustomerName = "${user}", Email = "${email}")`
-        }).firstPage();
+app.post('/api/login',userLogin);
 
-        if (existingRecords.length > 0) {
-            return res.status(409).json({ message: 'Username or email already exists.' });
-        }
-         // generateid
-        const records = await base(tableName).select({
-            fields: ['CustomerID'], // Only fetch the customerId field
-            sort: [{ field: 'CustomerID', direction: 'desc' }], // Sort in descending order
-            maxRecords: 1 // Get the highest customerId
-        }).firstPage();
-
-        let nextCustomerId = 'CUST001'; // Default starting ID if no records exist
-
-        if (records.length > 0) {
-            const highestId = records[0].get('CustomerID'); // Get the highest customerId
-            const numericPart = parseInt(highestId.replace('CUST', ''), 10); // Extract numeric part
-            nextCustomerId = `CUST${String(numericPart + 1).padStart(3, '0')}`; // Increment and format
-        }
+app.post('/api/create-checkout-session', payment)
 
 
 
-
-
-        // Hash the password using bcrypt
-        const saltRounds = 10; // Number of salt rounds for bcrypt
-        const hashedPassword = await bcrypt.hash(pwd, saltRounds);
-
-        // Create a new record in Airtable with hashed password
-        const newRecord = await base(tableName).create({
-            CustomerID: nextCustomerId,
-            CustomerName: user,
-            Email: email,
-            Password: hashedPassword // Store the hashed password
-        });
-
-        // Respond with the created record details
-        return res.status(201).json({
-            message: 'User registered successfully.',
-            data: newRecord
-        });
-    } catch (error) {
-        console.error('Error creating record:', error);
-        return res.status(500).json({ message: 'Server error. Please try again later.' });
-    }
-});
-
-
-// post login
-app.post('/api/login', async (req, res) => {
-    const { user, pwd } = req.body;
-    console.log('Incoming login request:', { user, pwd });
-    try {
-        const tableName = 'Customers';
-
-        // Find user by username or email
-        const records = await base(tableName).select({
-            filterByFormula: `OR(CustomerName = "${user}", Email = "${user}")`
-        }).firstPage();
-
-        if (records.length === 0) {
-            console.log('User not found');
-            return res.status(404).json({ message: 'User not found.' });
-        }
-
-        const foundUser = records[0].fields; // Get user details
-
-        // Compare provided password with stored hashed password
-        const isPasswordValid = await bcrypt.compare(pwd, foundUser.Password);
-        if (!isPasswordValid) {
-            return res.status(401).json({ message: 'Invalid credentials.' });
-        }
-
-        // Optionally: Generate a token (e.g., JWT) for authentication
-        const token = jwt.sign({ userId: foundUser.CustomerID }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-        return res.status(200).json({
-            message: 'Login successful.',
-            token: token, // Return token to the frontend for subsequent requests
-            user:  {
-                id: foundUser.CustomerID,
-                name: foundUser.CustomerName,
-                email: foundUser.Email,
-                address: foundUser.Address, // Include address
-                phone: foundUser.PhoneNumber, // Include phone number
-                shippingAddress:foundUser.ShippingAddress,
-                orderHistory:foundUser.OrderHistory,
-                PaymentMethod:foundUser.PaymentMethods,
-                cartItems:foundUser.CartItems,
-                reviews:foundUser.Reviews
-
-            }
-        });
-    } catch (error) {
-        console.error('Error during login:', error);
-        return res.status(500).json({ message: 'Server error. Please try again later.' });
-    }
-});
-
-
-
+/*
 app.post('/api/orders',  async (req, res) => {
     const { customerId, orderItems, totalAmount,shippingAddress } = req.body; 
     console.log('Received Order Data:', { customerId, orderItems, totalAmount });
@@ -299,7 +161,7 @@ app.post('/api/orders',  async (req, res) => {
     }
 
 
-});
+});*/
 
 
 

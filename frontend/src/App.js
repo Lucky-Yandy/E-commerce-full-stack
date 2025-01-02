@@ -8,6 +8,7 @@ import Login from './Pages/Login';
 import Shop from './Pages/Shop';
 import Product from './Pages/Product';
 import Cart from './Pages/Cart';
+import CheckoutSuccess from './Components/CheckoutSuccess/CheckoutSuccess';
 import Footer from './Components/Footer/Footer';
 import men_banner from './Components/Assets/menbanner.jpg'
 import women_banner from './Components/Assets/womenonsale.jpg'
@@ -30,7 +31,7 @@ function App() {
           <Route path='/cart' element={<Cart/>}/>
           <Route path='/signup' element={<Signup/>}/>
          <Route path='/login' element={<Login/>}/>
-        
+         <Route path='/checkout-success' element={<CheckoutSuccess/>}/>
        </Routes>
 
        <Footer />
