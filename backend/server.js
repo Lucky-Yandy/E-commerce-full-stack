@@ -1,7 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();
+const { createOrder } =require('./controller/orderRecordCreation');
 require('dotenv').config();
+
+
 
 //import from controller
 const { getProducts } = require('./controller/productController');
@@ -9,7 +12,8 @@ const { registerUser } = require('./controller/registerController');
 const { userLogin } = require('./controller/loginController');
 const {payment} = require('./controller/stripController')
 
-
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); 
+//const STRIPE_WEBHOOK_SECRET =process.env.STRIPE_WEBHOOK_SECRET;
 
 const corsOptions = {
     origin: 'http://localhost:3000',  // Allow requests only from this origin
@@ -26,147 +30,66 @@ app.post('/api/register', registerUser);
 
 app.post('/api/login',userLogin);
 
-app.post('/api/create-checkout-session', payment)
+app.post('/api/create-checkout-session', payment);
 
 
+app.post(
+  "/webhook",
+  express.json({ type: "application/json" }),
+  async (req, res) => {
+    let data;
+    let eventType;
 
-/*
-app.post('/api/orders',  async (req, res) => {
-    const { customerId, orderItems, totalAmount,shippingAddress } = req.body; 
-    console.log('Received Order Data:', { customerId, orderItems, totalAmount });
-    console.log("shipping address",shippingAddress);
-    try {
-        const orderTable = 'Orders';
-        const customerTable = 'Customers'; // Name of the linked table
-        const cartItemTable = 'CartItems';
-       
-        // Step 1: Fetch the record ID for the customer
-        const customerRecords = await base(customerTable).select({
-        filterByFormula: `{CustomerID} = "${customerId}"` // Adjust field name as per your schema
-        }).firstPage();
+    // Check if webhook signing is configured.
+    let webhookSecret;
+    webhookSecret = process.env.STRIPE_WEB_HOOK;
 
-        if (customerRecords.length === 0) {
-        return res.status(404).json({ message: `Customer with ID ${customerId} not found.` });
-        }
+    if (webhookSecret) {
+      // Retrieve the event by verifying the signature using the raw body and secret.
+      let event;
+      let signature = req.headers["stripe-signature"];
 
-        const customerRecordId = customerRecords[0].id; 
-         // Get the linked record ID
-         console.log('Linked Customer Record ID:', customerRecordId);
-        
-        
-// create address
-         const addressTable ='ShippingAddresses';
-         const addressRecord = await base(addressTable).create({
-           AddressLine1: shippingAddress.address1,
-           AddressLine2: shippingAddress.address2,// assuming your address has a field called 'Street'
-            City: shippingAddress.city,
-            State: shippingAddress.state,
-            PostalCode: shippingAddress.postalCode,
-            Country: shippingAddress.country,
-            Customer:[customerRecordId]
-        });
-
-        const addressRecordId = addressRecord.id;
-        console.log('Created Shipping Address Record ID:', addressRecordId);
-
-
-       
-         // generateid
-        const records = await base(orderTable).select({
-            fields: ['OrderID'], // Only fetch the customerId field
-            sort: [{ field: 'OrderID', direction: 'desc' }], // Sort in descending order
-            maxRecords: 1 // Get the highest customerId
-        }).firstPage();
-
-        let nextOrderId = 'ORD001'; // Default starting ID if no records exist
-
-        if (records.length > 0) {
-            const highestId = records[0].get('OrderID'); // Get the highest customerId
-            const numericPart = parseInt(highestId.replace('ORD', ''), 10); // Extract numeric part
-            nextOrderId = `ORD${String(numericPart + 1).padStart(3, '0')}`; // Increment and format
-        }
-
-       
-
-        // Create a new record in Airtable with hashed password
-        const newRecord = await base(orderTable).create({
-            OrderID:  nextOrderId,
-            Customer: [customerRecordId],
-            TotalPrice:totalAmount,
-            ShippingAddress: [addressRecordId]
-            // Store the hashed password
-        });
-
-      
-
-        const orderId = newRecord.id; // Airtable's system-generated record ID
-         console.log('Created System OrderID:', orderId);  
-     //create cartitem records
-    
-    
-    
-    // Get the length of the cartItemsRecords array
-   
-    const existingCartItems = await base(cartItemTable).select({
-        fields: ['CartItemID'], // Only fetch CartItemID field
-        sort: [{ field: 'CartItemID', direction: 'desc' }], // Sort to get the highest ID first
-        maxRecords: 1 // Only get the highest record
-    }).firstPage();
-
-    // Extract the highest CartItemID number
-    let currentCartItemCount = 1000; // Default starting point if no records exist
-    if (existingCartItems.length > 0) {
-        const highestCartItemId = existingCartItems[0].get('CartItemID'); // Get the highest CartItemID
-        const numericPart = parseInt(highestCartItemId.replace('CART', ''), 10); // Extract numeric part
-        currentCartItemCount = numericPart; // Set the highest CartItemID number
-}
-
-
-
-
-     const cartItemPromises = orderItems.map((item,index) => {
-          const cartItemId = `CART${(currentCartItemCount + index + 1).toString()}`;
-        const totalItemPrice = parseFloat(item.total);
-        if (isNaN(totalItemPrice)) {
-            throw new Error(`Invalid total for item: ${item.name}`);
-        }
-
-        
-
-        return base(cartItemTable).create({
-          CartItemID:cartItemId,
-       
-          Product: [item.productId], // Linked record
-          OrderId: [orderId],  // Linked record to the Order table
-          Quantity: item.quantity,
-          PricePerUnit: item.price,
-          TotalPrice: totalItemPrice
-
-        });
-      });
-  
-      // Wait for all CartItem records to be created
-      const cartItemRecords = await Promise.all(cartItemPromises);
-
-
-        console.log("new order",newRecord);
-        // Respond with the created record details
-        return res.status(201).json({
-            message: 'order created successfully.',
-            data: newRecord
-        });
-    } catch (error) {
-        console.error('Error creating record:', error);
-        return res.status(500).json({ message: 'Server error. Please try again later.' });
+      try {
+        event = stripe.webhooks.constructEvent(
+          req.body,
+          signature,
+          webhookSecret
+        );
+      } catch (err) {
+        console.log(`⚠️  Webhook signature verification failed:  ${err}`);
+        return res.sendStatus(400);
+      }
+      // Extract the object from the event.
+      data = event.data.object;
+      eventType = event.type;
+    } else {
+      // Webhook signing is recommended, but if the secret is not configured in `config.js`,
+      // retrieve the event data directly from the request body.
+      data = req.body.data.object;
+      eventType = req.body.type;
     }
 
+    // Handle the checkout.session.completed event
+    if (eventType === "checkout.session.completed") {
+      stripe.customers
+        .retrieve(data.customer)
+        .then(async (customer) => {
+          try {
+            console.log("this is data",data);
+            console.log("this is customer",customer)
+            // CREATE ORDER
+            //createOrder(customer, data);
+          } catch (err) {
+            console.log(typeof createOrder);
+            console.log(err);
+          }
+        })
+        .catch((err) => console.log(err.message));
+    }
 
-});*/
-
-
-
-
-
+    res.status(200).end();
+  }
+);
 
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

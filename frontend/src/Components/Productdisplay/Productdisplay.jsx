@@ -5,7 +5,7 @@ import { ShopContext } from '../../Context/ShopContext';
 const Productdisplay = (props) => {
               const {product} =props;
               const {addToCart} =useContext(ShopContext);
-             // console.log("the product on display page",product)
+              console.log("the product on display page",product)
            
             // State to store the clicked image URL
             const [selectedImage, setSelectedImage] = useState(null);

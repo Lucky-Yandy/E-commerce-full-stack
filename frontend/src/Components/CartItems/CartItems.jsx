@@ -3,15 +3,15 @@ import './CartItem.css'
 import { ShopContext } from '../../Context/ShopContext'
 import cross from '../Assets/cross.png'
 import  AuthContext  from '../../Context/LoginAuthProvider'
-import AddressForm from '../AddressForm/AddressForm'
+//import AddressForm from '../AddressForm/AddressForm'
 const CartItems = () => {
        const {getTotalCartAmount, products,cartItems,removeFromCart} =useContext(ShopContext);
        const { auth } = useContext(AuthContext); 
        const [errorMessage, setErrorMessage] = useState('');
        console.log("this is cartitems:",cartItems);
-
+      
   //address
-      const [address, setAddress] = useState({
+   /*   const [address, setAddress] = useState({
         address1:'',
         address2: '',
         city: '',
@@ -45,7 +45,7 @@ const CartItems = () => {
   
   console.log(address);
 
-       //const token = localStorage.getItem('authToken');
+     */  //const token = localStorage.getItem('authToken');
       
 
        //submit order
@@ -59,11 +59,11 @@ const CartItems = () => {
         }
 
         //check if the auth.address is false 
-        if(!auth.shippingAddress &&!validateAddress()){
+        /*if(!auth.shippingAddress &&!validateAddress()){
           setShowAddressForm(true);
           setErrorMessage('Please provide a valid address.');
           return;
-        }
+        }*/
     
         // Prepare order data (including product details from cart)
         const orderItems = products
@@ -78,16 +78,13 @@ const CartItems = () => {
             total: (product.ProductPrice * cartItems[product.id]).toFixed(2),
           }));
     
-        const customerId = auth.id; 
-        console.log("this is the auth",auth);
-        const customerName=auth.name;
-        console.log("this is the auth name",customerName);
+       
         const orderData = {
-          customerId,
-          customerName,
+         
           orderItems,
           totalAmount: getTotalCartAmount(),
-          shippingAddress: address,
+          //shippingAddress: address,
+          auth,
          // status: 'Pending', // Default order status
         };
         console.log("the data will be submited",orderData);
@@ -185,14 +182,14 @@ const CartItems = () => {
       </div>
       
     </div>
-    {showAddressForm && (
+    {/*showAddressForm && (
         <AddressForm
           address={address}
           setAddress={setAddress}
           closeAddressForm={closeAddressForm} 
           onSubmit={handleAddressSubmit}
         />
-      )}
+      )*/}
       {errorMessage && <p className="error-message">{errorMessage}</p>}
 
 
